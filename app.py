@@ -1,5 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, Response
 import sqlite3
+import csv
+from io import StringIO
 import os
 
 app = Flask(__name__)
@@ -15,18 +17,18 @@ def get_db():
 def init_db():
     conn = get_db()
     c = conn.cursor()
+    # id ahora es TEXT para poder guardar "00", "01", etc
     c.execute('''CREATE TABLE IF NOT EXISTS numeros 
-                 (id TEXT PRIMARY KEY, estado TEXT, comprador TEXT, fecha TEXT)''') # OJO: id ahora es TEXT
+                 (id TEXT PRIMARY KEY, estado TEXT, comprador TEXT, fecha TEXT)''')
+    # Rellenar solo si está vacía
     count = c.execute("SELECT COUNT(*) FROM numeros").fetchone()[0]
     if count == 0:
         for i in range(0, 100): # de 0 a 99
-            numero_str = f"{i:02d}" # Esto lo convierte en 00, 01, 02... 99
+            numero_str = f"{i:02d}" # Formato 00, 01, 02... 99
             c.execute("INSERT INTO numeros (id, estado) VALUES (?,?)", (numero_str, 'disponible'))
         print("Base de datos creada con numeros del 00 al 99")
     conn.commit()
     conn.close()
-
-
 
 # Esto fuerza que se cree al iniciar en Render
 init_db()
@@ -38,7 +40,7 @@ def index():
     conn.close()
     return render_template('index.html', numeros=numeros)
 
-@app.route('/comprar/<string:numero>', methods=['POST'])
+@app.route('/comprar/<string:numero>', methods=['POST']) # ahora es string
 def comprar(numero):
     comprador = request.form.get('nombre', 'Anónimo')
     conn = get_db()
@@ -70,6 +72,29 @@ def admin():
         else:
             flash("Clave incorrecta", "error")
     return render_template('admin.html')
+
+@app.route('/admin/reporte')
+def reporte():
+    clave = request.args.get('clave')
+    if clave!= CLAVE_ADMIN:
+        return "No autorizado", 403
+    
+    conn = get_db()
+    numeros = conn.execute('SELECT * FROM numeros ORDER BY id').fetchall()
+    conn.close()
+    
+    si = StringIO()
+    cw = csv.writer(si)
+    cw.writerow(['Numero', 'Estado', 'Comprador', 'Fecha']) # Encabezados
+    
+    for n in numeros:
+        cw.writerow([n['id'], n['estado'], n['comprador'] or '', n['fecha'] or ''])
+    
+    output = si.getvalue()
+    return Response(
+        output,
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=reporte_rifa.csv"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
