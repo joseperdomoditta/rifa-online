@@ -5,7 +5,7 @@ import os
 app = Flask(__name__)
 app.secret_key = 'clave_secreta_para_flask'
 DB_NAME = 'rifa.db'
-CLAVE_ADMIN = "RIFA2026" # <-- CAMBIA ESTA CLAVE
+CLAVE_ADMIN = "RIFA2026"
 
 def get_db():
     conn = sqlite3.connect(DB_NAME, check_same_thread=False)
@@ -13,16 +13,21 @@ def get_db():
     return conn
 
 def init_db():
-    if not os.path.exists(DB_NAME):
-        conn = get_db()
-        c = conn.cursor()
-        c.execute('''CREATE TABLE numeros 
-                     (id INTEGER PRIMARY KEY, estado TEXT, comprador TEXT, fecha TEXT)''')
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS numeros 
+                 (id INTEGER PRIMARY KEY, estado TEXT, comprador TEXT, fecha TEXT)''')
+    # Rellenar solo si está vacía
+    count = c.execute("SELECT COUNT(*) FROM numeros").fetchone()[0]
+    if count == 0:
         for i in range(1, 101):
-            c.execute("INSERT INTO numeros (id, estado) VALUES (?, ?)", (i, 'disponible'))
-        conn.commit()
-        conn.close()
-        print("Base de datos creada")
+            c.execute("INSERT INTO numeros (id, estado) VALUES (?,?)", (i, 'disponible'))
+        print("Base de datos creada con 100 numeros")
+    conn.commit()
+    conn.close()
+
+# Esto fuerza que se cree al iniciar en Render
+init_db()
 
 @app.route('/')
 def index():
@@ -37,9 +42,9 @@ def comprar(numero):
     conn = get_db()
     c = conn.cursor()
     c.execute("BEGIN TRANSACTION")
-    estado_actual = c.execute("SELECT estado FROM numeros WHERE id = ?", (numero,)).fetchone()
+    estado_actual = c.execute("SELECT estado FROM numeros WHERE id =?", (numero,)).fetchone()
     if estado_actual and estado_actual['estado'] == 'disponible':
-        c.execute("UPDATE numeros SET estado = 'ocupado', comprador = ?, fecha = datetime('now') WHERE id = ?", 
+        c.execute("UPDATE numeros SET estado = 'ocupado', comprador =?, fecha = datetime('now') WHERE id =?", 
                   (comprador, numero))
         conn.commit()
         flash(f"Numero {numero} reservado para {comprador}", "success")
@@ -65,5 +70,4 @@ def admin():
     return render_template('admin.html')
 
 if __name__ == '__main__':
-    init_db()
     app.run(host='0.0.0.0', port=5000)
