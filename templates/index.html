@@ -3,31 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rifa 100 Números</title>
+    <title>Rifa 00 al 99</title>
     <style>
-        body { font-family: Arial; background: #f0f0f0; text-align: center; }
-        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; max-width: 600px; margin: 20px auto; }
-        .btn { padding: 15px 5px; font-size: 16px; }
-        .disponible { background: #4CAF50; color: white; }
-        .ocupado { background: #f44336; color: white; cursor: not-allowed; }
+        body { font-family: Arial; background: #f0f0f0; text-align: center; padding: 20px; }
+        h1 { color: #333; }
+       .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; max-width: 650px; margin: 20px auto; }
+       .btn { padding: 15px 5px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+       .btn:hover { transform: scale(1.05); }
+       .disponible { background: #4CAF50; color: white; }
+       .ocupado { background: #f44336; color: white; cursor: not-allowed; }
+       .ocupado small { font-size: 10px; display: block; }
         form { display: inline; }
-        input { padding: 8px; margin: 5px; }
+        input { padding: 8px; margin: 5px 0; width: 90%; border-radius: 5px; border: 1px solid #ccc; }
+       .flash { padding: 10px; margin: 10px auto; max-width: 600px; border-radius: 5px; }
+       .success { background: #d4edda; color: #155724; }
+       .error { background: #f8d7da; color: #721c24; }
     </style>
 </head>
 <body>
     <h1>RIFA 100 NÚMEROS</h1>
-    <p>Elige tu número y escribe tu nombre</p>
+    <p>Del 00 al 99 - Elige tu número y escribe tu nombre</p>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
     <div class="grid">
         {% for n in numeros %}
             {% if n.estado == 'disponible' %}
             <form method="POST" action="/comprar/{{ n.id }}">
                 <input type="text" name="nombre" placeholder="Tu nombre" required>
                 <button class="btn disponible">{{ n.id }}</button>
-                </form>
+            </form>
             {% else %}
                 <button class="btn ocupado">{{ n.id }}<br><small>{{ n.comprador }}</small></button>
             {% endif %}
         {% endfor %}
     </div>
+    <p><a href="/admin">Panel Admin</a></p>
 </body>
 </html>
