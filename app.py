@@ -7,7 +7,7 @@ from io import StringIO
 app = Flask(__name__)
 app.secret_key = 'clave_secreta_para_flask'
 DB_NAME = 'rifa.db'
-CLAVE_ADMIN = "RIFA2026"
+CLAVE_ADMIN = "@JoseperNpep963"
 PRECIO = 20000
 
 def get_db():
@@ -17,9 +17,9 @@ def get_db():
 
 def init_db():
     # ESTO BORRA LA BD VIEJA DEL 1-100
-    if os.path.exists(DB_NAME):
-        os.remove(DB_NAME)
-        print("BD vieja borrada")
+    # if os.path.exists(DB_NAME):
+    #    os.remove(DB_NAME)
+    #    print("BD vieja borrada")
         
     conn = get_db()
     c = conn.cursor()
