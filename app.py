@@ -16,9 +16,9 @@ def get_db():
 
 def init_db():
     # FORZAR BORRADO 1 SOLA VEZ
-    if os.path.exists(DB_NAME):
-        os.remove(DB_NAME)
-        print("BD vieja borrada")
+    # if os.path.exists(DB_NAME):
+    #    os.remove(DB_NAME)
+    #    print("BD vieja borrada")
         
     conn = get_db()
     c = conn.cursor()
