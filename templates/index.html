@@ -6,8 +6,8 @@
     <title>Rifa 100 Números</title>
     <style>
         body { font-family: Arial; background: #f0f0f0; text-align: center; }
-        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 10px; max-width: 800px; margin: 20px auto; }
-        .btn { padding: 20px; font-size: 18px; border: none; border-radius: 8px; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; max-width: 600px; margin: 20px auto; }
+        .btn { padding: 15px 5px; font-size: 16px; }
         .disponible { background: #4CAF50; color: white; }
         .ocupado { background: #f44336; color: white; cursor: not-allowed; }
         form { display: inline; }
@@ -23,7 +23,7 @@
             <form method="POST" action="/comprar/{{ n.id }}">
                 <input type="text" name="nombre" placeholder="Tu nombre" required>
                 <button class="btn disponible">{{ n.id }}</button>
-            </form>
+                </form>
             {% else %}
                 <button class="btn ocupado">{{ n.id }}<br><small>{{ n.comprador }}</small></button>
             {% endif %}
