@@ -24,7 +24,7 @@ def init_db():
     # Rellenar solo si está vacía
     count = c.execute("SELECT COUNT(*) FROM numeros").fetchone()[0]
     if count == 0:
-        for i in range(0, 100): # de 0 a 99
+        for i in range(0, 99): # de 0 a 99
             numero_str = f"{i:02d}" # Formato 00, 01, 02... 99
             c.execute("INSERT INTO numeros (id, estado) VALUES (?,?)", (numero_str, 'disponible'))
         print("Base de datos creada con numeros del 00 al 99")
