@@ -15,13 +15,6 @@ def get_db():
     return conn
 
 def init_db():
-
-# BORRAR ESTO DESPUÉS DE 1 DEPLOY
-import os
-if os.path.exists(DB_NAME):
-    os.remove(DB_NAME)
-    init_db()
-
     
     conn = get_db()
     c = conn.cursor()
