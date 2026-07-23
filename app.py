@@ -7,8 +7,8 @@ from io import StringIO
 app = Flask(__name__)
 app.secret_key = 'clave_secreta_para_flask'
 DB_NAME = 'rifa.db'
-CLAVE_ADMIN = "@JoseperNpep963"
-PRECIO = 20000 # PRECIO POR NUMERO
+CLAVE_ADMIN = "RIFA2026"
+PRECIO = 20000
 
 def get_db():
     conn = sqlite3.connect(DB_NAME, check_same_thread=False)
@@ -16,15 +16,20 @@ def get_db():
     return conn
 
 def init_db():
+    # ESTO BORRA LA BD VIEJA DEL 1-100
+    if os.path.exists(DB_NAME):
+        os.remove(DB_NAME)
+        print("BD vieja borrada")
+        
     conn = get_db()
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS numeros 
                  (id TEXT PRIMARY KEY, estado TEXT, comprador TEXT, fecha TEXT)''')
-    count = c.execute("SELECT COUNT(*) FROM numeros").fetchone()[0]
-    if count == 0:
-        for i in range(0, 100):
-            numero_str = f"{i:02d}"
-            c.execute("INSERT INTO numeros (id, estado) VALUES (?,?)", (numero_str, 'disponible'))
+    # Crear del 00 al 99
+    for i in range(0, 100):
+        numero_str = f"{i:02d}"
+        c.execute("INSERT INTO numeros (id, estado) VALUES (?,?)", (numero_str, 'disponible'))
+    print("Base de datos creada con numeros del 00 al 99")
     conn.commit()
     conn.close()
 
@@ -70,7 +75,6 @@ def admin():
             return redirect(url_for('index'))
         else:
             flash("Clave incorrecta", "error")
-    
     conn = get_db()
     vendidos = conn.execute("SELECT COUNT(*) FROM numeros WHERE estado='ocupado'").fetchone()[0]
     total = vendidos * PRECIO
@@ -87,7 +91,6 @@ def reporte():
     vendidos = conn.execute("SELECT COUNT(*) FROM numeros WHERE estado='ocupado'").fetchone()[0]
     total = vendidos * PRECIO
     conn.close()
-    
     si = StringIO()
     cw = csv.writer(si)
     cw.writerow(['REPORTE RIFA VIVEIN'])
@@ -96,10 +99,8 @@ def reporte():
     cw.writerow(['Numeros Vendidos', f"{vendidos}/100"])
     cw.writerow([])
     cw.writerow(['Numero', 'Estado', 'Comprador', 'Fecha'])
-    
     for n in numeros:
         cw.writerow([n['id'], n['estado'], n['comprador'] or '', n['fecha'] or ''])
-    
     output = si.getvalue()
     return Response(output, mimetype="text/csv", headers={"Content-disposition": "attachment; filename=reporte_rifa_VIVEIN.csv"})
 
