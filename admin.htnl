@@ -1,5 +1,0 @@
-    <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Admin</title>
-    <style>body{font-family:Arial;background:#f3f4f6;padding:20px}.container{max-width:400px;margin:auto;text-align:center}</style>
-    </head><body><div class="container"><h1>Resetear Rifa</h1>
-    <form method="POST"><input type="password" name="clave" placeholder="Clave de Administrador" required>
-    <button type="submit">Resetear Todo</button></form><a href="/">Volver</a></div></body></html>
