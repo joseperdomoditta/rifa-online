@@ -1,19 +1,33 @@
-    <!DOCTYPE html>
-    <html lang="es">
-    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rifa 100</title><style>
-    body{font-family:Arial;background:#f3f4f6;padding:10px} .container{max-width:900px;margin:auto;text-align:center}
-    .grid{display:grid;grid-template-columns:repeat(10,1fr);gap:8px} 
-    .btn{border:none;color:white;padding:15px 5px;font-weight:bold;border-radius:8px;width:100%}
-    .disponible{background:#22c55e} .ocupado{background:#ef4444;cursor:not-allowed}
-    form{display:flex;flex-direction:column;gap:4px} form input{padding:4px;text-align:center;font-size:12px}
-    .alert.success{background:#d1fae5;color:#065f46;padding:10px} .alert.error{background:#fee2e2;color:#991b1b;padding:10px}
-    @media(max-width:600px){.grid{grid-template-columns:repeat(5,1fr)}}
-    </style></head><body><div class="container"><h1>Rifa 100 Números</h1>
-    {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}
-    <div class="alert {{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
-    <div class="grid">{% for n in numeros %}{% if n.estado == 'disponible' %}
-    <form action="/comprar/{{n.id}}" method="post"><input type="text" name="nombre" placeholder="Tu nombre" required>
-    <button type="submit" class="btn disponible">{{ n.id }}</button></form>
-    {% else %}<div class="btn ocupado">{{ n.id }}<br><small>{{ n.comprador }}</small></div>{% endif %}{% endfor %}</div>
-    <a href="/admin">Panel Admin</a></div></body></html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rifa 100 Números</title>
+    <style>
+        body { font-family: Arial; background: #f0f0f0; text-align: center; }
+        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 10px; max-width: 800px; margin: 20px auto; }
+        .btn { padding: 20px; font-size: 18px; border: none; border-radius: 8px; cursor: pointer; }
+        .disponible { background: #4CAF50; color: white; }
+        .ocupado { background: #f44336; color: white; cursor: not-allowed; }
+        form { display: inline; }
+        input { padding: 8px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>RIFA 100 NÚMEROS</h1>
+    <p>Elige tu número y escribe tu nombre</p>
+    <div class="grid">
+        {% for n in numeros %}
+            {% if n.estado == 'disponible' %}
+            <form method="POST" action="/comprar/{{ n.id }}">
+                <input type="text" name="nombre" placeholder="Tu nombre" required>
+                <button class="btn disponible">{{ n.id }}</button>
+            </form>
+            {% else %}
+                <button class="btn ocupado">{{ n.id }}<br><small>{{ n.comprador }}</small></button>
+            {% endif %}
+        {% endfor %}
+    </div>
+</body>
+</html>
