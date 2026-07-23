@@ -16,15 +16,17 @@ def init_db():
     conn = get_db()
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS numeros 
-                 (id INTEGER PRIMARY KEY, estado TEXT, comprador TEXT, fecha TEXT)''')
-    # Rellenar solo si está vacía
+                 (id TEXT PRIMARY KEY, estado TEXT, comprador TEXT, fecha TEXT)''') # OJO: id ahora es TEXT
     count = c.execute("SELECT COUNT(*) FROM numeros").fetchone()[0]
     if count == 0:
-        for i in range(1, 101):
-            c.execute("INSERT INTO numeros (id, estado) VALUES (?,?)", (i, 'disponible'))
-        print("Base de datos creada con 100 numeros")
+        for i in range(0, 100): # de 0 a 99
+            numero_str = f"{i:02d}" # Esto lo convierte en 00, 01, 02... 99
+            c.execute("INSERT INTO numeros (id, estado) VALUES (?,?)", (numero_str, 'disponible'))
+        print("Base de datos creada con numeros del 00 al 99")
     conn.commit()
     conn.close()
+
+
 
 # Esto fuerza que se cree al iniciar en Render
 init_db()
@@ -36,7 +38,7 @@ def index():
     conn.close()
     return render_template('index.html', numeros=numeros)
 
-@app.route('/comprar/<int:numero>', methods=['POST'])
+@app.route('/comprar/<string:numero>', methods=['POST'])
 def comprar(numero):
     comprador = request.form.get('nombre', 'Anónimo')
     conn = get_db()
