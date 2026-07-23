@@ -5,7 +5,7 @@ import os
 app = Flask(__name__)
 app.secret_key = 'clave_secreta_para_flask'
 DB_NAME = 'rifa.db'
-CLAVE_ADMIN = "RIFA2026"
+CLAVE_ADMIN = "@JoseperNpep963"
 
 def get_db():
     conn = sqlite3.connect(DB_NAME, check_same_thread=False)
