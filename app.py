@@ -7,7 +7,8 @@ from io import StringIO
 app = Flask(__name__)
 app.secret_key = 'clave_secreta_para_flask'
 DB_NAME = 'rifa.db'
-CLAVE_ADMIN = "RIFA2026"
+CLAVE_ADMIN = "@JoseperNpep963"
+PRECIO = 20000 # PRECIO POR NUMERO
 
 def get_db():
     conn = sqlite3.connect(DB_NAME, check_same_thread=False)
@@ -15,20 +16,15 @@ def get_db():
     return conn
 
 def init_db():
-    # FORZAR BORRADO 1 SOLA VEZ
-    # if os.path.exists(DB_NAME):
-    #    os.remove(DB_NAME)
-    #    print("BD vieja borrada")
-        
     conn = get_db()
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS numeros 
                  (id TEXT PRIMARY KEY, estado TEXT, comprador TEXT, fecha TEXT)''')
-    # Crear del 00 al 99
-    for i in range(0, 100):
-        numero_str = f"{i:02d}"
-        c.execute("INSERT INTO numeros (id, estado) VALUES (?,?)", (numero_str, 'disponible'))
-    print("Base de datos creada con numeros del 00 al 99")
+    count = c.execute("SELECT COUNT(*) FROM numeros").fetchone()[0]
+    if count == 0:
+        for i in range(0, 100):
+            numero_str = f"{i:02d}"
+            c.execute("INSERT INTO numeros (id, estado) VALUES (?,?)", (numero_str, 'disponible'))
     conn.commit()
     conn.close()
 
@@ -38,8 +34,10 @@ init_db()
 def index():
     conn = get_db()
     numeros = conn.execute('SELECT * FROM numeros ORDER BY id').fetchall()
+    vendidos = conn.execute("SELECT COUNT(*) FROM numeros WHERE estado='ocupado'").fetchone()[0]
+    total = vendidos * PRECIO
     conn.close()
-    return render_template('index.html', numeros=numeros)
+    return render_template('index.html', numeros=numeros, precio=PRECIO, total=total, vendidos=vendidos)
 
 @app.route('/comprar/<string:numero>', methods=['POST'])
 def comprar(numero):
@@ -52,7 +50,7 @@ def comprar(numero):
         c.execute("UPDATE numeros SET estado = 'ocupado', comprador =?, fecha = datetime('now') WHERE id =?", 
                   (comprador, numero))
         conn.commit()
-        flash(f"Numero {numero} reservado para {comprador}", "success")
+        flash(f"Numero {numero} reservado para {comprador} por ${PRECIO:,}", "success")
     else:
         conn.rollback()
         flash(f"El numero {numero} ya fue tomado", "error")
@@ -72,7 +70,12 @@ def admin():
             return redirect(url_for('index'))
         else:
             flash("Clave incorrecta", "error")
-    return render_template('admin.html')
+    
+    conn = get_db()
+    vendidos = conn.execute("SELECT COUNT(*) FROM numeros WHERE estado='ocupado'").fetchone()[0]
+    total = vendidos * PRECIO
+    conn.close()
+    return render_template('admin.html', precio=PRECIO, total=total, vendidos=vendidos)
 
 @app.route('/admin/reporte')
 def reporte():
@@ -81,14 +84,24 @@ def reporte():
         return "No autorizado", 403
     conn = get_db()
     numeros = conn.execute('SELECT * FROM numeros ORDER BY id').fetchall()
+    vendidos = conn.execute("SELECT COUNT(*) FROM numeros WHERE estado='ocupado'").fetchone()[0]
+    total = vendidos * PRECIO
     conn.close()
+    
     si = StringIO()
     cw = csv.writer(si)
+    cw.writerow(['REPORTE RIFA VIVEIN'])
+    cw.writerow(['Precio por numero', f"${PRECIO:,}"])
+    cw.writerow(['Total Recaudado', f"${total:,}"])
+    cw.writerow(['Numeros Vendidos', f"{vendidos}/100"])
+    cw.writerow([])
     cw.writerow(['Numero', 'Estado', 'Comprador', 'Fecha'])
+    
     for n in numeros:
         cw.writerow([n['id'], n['estado'], n['comprador'] or '', n['fecha'] or ''])
+    
     output = si.getvalue()
-    return Response(output, mimetype="text/csv", headers={"Content-disposition": "attachment; filename=reporte_rifa.csv"})
+    return Response(output, mimetype="text/csv", headers={"Content-disposition": "attachment; filename=reporte_rifa_VIVEIN.csv"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
