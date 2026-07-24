@@ -1,45 +1,51 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, Response
-import sqlite3
-import csv
+import psycopg2
+import psycopg2.extras
 import os
+import csv
 from io import StringIO
+from urllib.parse import urlparse
 
 app = Flask(__name__)
-app.secret_key = 'clave_secreta_para_flask'
-DB_NAME = 'rifa.db'
+app.secret_key = 'clave_super_secreta_vivein_2026'
 CLAVE_ADMIN = "@JoseperNpep963"
 PRECIO = 20000
 
 def get_db():
-    conn = sqlite3.connect(DB_NAME, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
+    url = urlparse(os.environ['DATABASE_URL'])
+    conn = psycopg2.connect(
+        database=url.path[1:],
+        user=url.username,
+        password=url.password,
+        host=url.hostname,
+        port=url.port
+    )
     return conn
 
 def init_db():
-    # ESTO BORRA LA BD VIEJA DEL 1-100
-    # if os.path.exists(DB_NAME):
-    #    os.remove(DB_NAME)
-    #    print("BD vieja borrada")
-        
     conn = get_db()
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS numeros 
-                 (id TEXT PRIMARY KEY, estado TEXT, comprador TEXT, fecha TEXT)''')
-    # Crear del 00 al 99
-    for i in range(0, 100):
-        numero_str = f"{i:02d}"
-        c.execute("INSERT INTO numeros (id, estado) VALUES (?,?)", (numero_str, 'disponible'))
-    print("Base de datos creada con numeros del 00 al 99")
+                 (id TEXT PRIMARY KEY, estado TEXT, comprador TEXT, fecha TIMESTAMP)''')
+    c.execute("SELECT COUNT(*) FROM numeros")
+    if c.fetchone()[0] == 0:
+        for i in range(0, 100):
+            numero_str = f"{i:02d}"
+            c.execute("INSERT INTO numeros (id, estado) VALUES (%s,%s)", (numero_str, 'disponible'))
     conn.commit()
     conn.close()
 
-init_db()
+with app.app_context():
+    init_db()
 
 @app.route('/')
 def index():
     conn = get_db()
-    numeros = conn.execute('SELECT * FROM numeros ORDER BY id').fetchall()
-    vendidos = conn.execute("SELECT COUNT(*) FROM numeros WHERE estado='ocupado'").fetchone()[0]
+    c = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    c.execute('SELECT * FROM numeros ORDER BY id')
+    numeros = c.fetchall()
+    c.execute("SELECT COUNT(*) FROM numeros WHERE estado='ocupado'")
+    vendidos = c.fetchone()[0]
     total = vendidos * PRECIO
     conn.close()
     return render_template('index.html', numeros=numeros, precio=PRECIO, total=total, vendidos=vendidos)
@@ -49,16 +55,17 @@ def comprar(numero):
     comprador = request.form.get('nombre', 'Anónimo')
     conn = get_db()
     c = conn.cursor()
-    c.execute("BEGIN TRANSACTION")
-    estado_actual = c.execute("SELECT estado FROM numeros WHERE id =?", (numero,)).fetchone()
-    if estado_actual and estado_actual['estado'] == 'disponible':
-        c.execute("UPDATE numeros SET estado = 'ocupado', comprador =?, fecha = datetime('now') WHERE id =?", 
-                  (comprador, numero))
-        conn.commit()
-        flash(f"Numero {numero} reservado para {comprador} por ${PRECIO:,}", "success")
-    else:
+    try:
+        c.execute("UPDATE numeros SET estado = 'ocupado', comprador = %s, fecha = NOW() WHERE id = %s AND estado = 'disponible'", (comprador, numero))
+        if c.rowcount == 1:
+            conn.commit()
+            flash(f"¡Listo! Número {numero} reservado para {comprador}", "success")
+        else:
+            conn.rollback()
+            flash(f"El número {numero} ya fue tomado", "error")
+    except:
         conn.rollback()
-        flash(f"El numero {numero} ya fue tomado", "error")
+        flash("Error, intenta de nuevo", "error")
     conn.close()
     return redirect(url_for('index'))
 
@@ -68,15 +75,19 @@ def admin():
         clave = request.form.get('clave')
         if clave == CLAVE_ADMIN:
             conn = get_db()
-            conn.execute("UPDATE numeros SET estado = 'disponible', comprador = NULL, fecha = NULL")
+            c = conn.cursor()
+            c.execute("UPDATE numeros SET estado = 'disponible', comprador = NULL, fecha = NULL")
             conn.commit()
             conn.close()
             flash("Rifa reseteada", "success")
             return redirect(url_for('index'))
         else:
             flash("Clave incorrecta", "error")
+    
     conn = get_db()
-    vendidos = conn.execute("SELECT COUNT(*) FROM numeros WHERE estado='ocupado'").fetchone()[0]
+    c = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    c.execute("SELECT COUNT(*) FROM numeros WHERE estado='ocupado'")
+    vendidos = c.fetchone()[0]
     total = vendidos * PRECIO
     conn.close()
     return render_template('admin.html', precio=PRECIO, total=total, vendidos=vendidos)
@@ -87,16 +98,21 @@ def reporte():
     if clave!= CLAVE_ADMIN:
         return "No autorizado", 403
     conn = get_db()
-    numeros = conn.execute('SELECT * FROM numeros ORDER BY id').fetchall()
-    vendidos = conn.execute("SELECT COUNT(*) FROM numeros WHERE estado='ocupado'").fetchone()[0]
+    c = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    c.execute('SELECT * FROM numeros ORDER BY id')
+    numeros = c.fetchall()
+    c.execute("SELECT COUNT(*) FROM numeros WHERE estado='ocupado'")
+    vendidos = c.fetchone()[0]
     total = vendidos * PRECIO
     conn.close()
+    
     si = StringIO()
     cw = csv.writer(si)
     cw.writerow(['REPORTE RIFA VIVEIN'])
     cw.writerow(['Precio por numero', f"${PRECIO:,}"])
     cw.writerow(['Total Recaudado', f"${total:,}"])
     cw.writerow(['Numeros Vendidos', f"{vendidos}/100"])
+    cw.writerow(['Meta: $2,000,000'])
     cw.writerow([])
     cw.writerow(['Numero', 'Estado', 'Comprador', 'Fecha'])
     for n in numeros:
