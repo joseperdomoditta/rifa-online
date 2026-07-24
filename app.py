@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, Response
-import psycopg2
+import psycopg2cffi as psycopg2
 import psycopg2.extras
 import os
 import csv
